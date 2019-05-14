@@ -29,7 +29,7 @@ function post($key, $default = null)
 /**
  * 获取目录下的文件信息
  *
- * @param  string $path 目录路径
+ * @param string $path 目录路径
  *
  * @return array 文件信息
  */
@@ -55,8 +55,8 @@ function getPathFileName($path)
 /**
  * PHP获取字符串中英文混合长度
  *
- * @param   string $str     字符串
- * @param   string $charset 编码( 默认为UTF-8 )
+ * @param string $str     字符串
+ * @param string $charset 编码( 默认为UTF-8 )
  *
  * @return  int 返回长度，1中文=1位，2英文=1位
  */
@@ -85,7 +85,7 @@ function strLength($str, $charset = 'utf-8')
 /**
  * PHP获取随机字符串验证码
  *
- * @param   int $length 验证码长度( 默认为四位 )
+ * @param int $length 验证码长度( 默认为四位 )
  *
  * @return  string    返回一个包含 A-Z a-z 0-9 的随机字符串
  */
@@ -190,7 +190,7 @@ function fileUpload($file, $dirName = 'uploads', array $params = [])
 /**
  * 获取唯一码
  *
- * @param  string $prefix 默认空
+ * @param string $prefix 默认空
  *
  * @return string 返回前缀加 + 年月日时分秒 + 微妙数 + 6位随机码
  */
@@ -214,8 +214,8 @@ function getRandomStr($length = 16)
 /**
  * [getSign description]
  *
- * @param  array  $params [description]
- * @param  string $key    [description]
+ * @param array  $params [description]
+ * @param string $key    [description]
  *
  * @return [type]         [description]
  */
@@ -260,8 +260,8 @@ function echoJson($mixed, $isExit = true, $options = JSON_UNESCAPED_SLASHES | JS
 /**
  * 返回错误信息
  *
- * @param  integer $code 错误码,默认401
- * @param  string  $msg  错误提示信息
+ * @param integer $code 错误码,默认401
+ * @param string  $msg  错误提示信息
  *
  * @return void
  */
@@ -273,8 +273,8 @@ function error($code = 401, $msg = 'fail')
 /**
  * 返回正确数据
  *
- * @param  array|mixed $data 返回data 数据信息
- * @param  string      $msg  提示信息
+ * @param array|mixed $data 返回data 数据信息
+ * @param string      $msg  提示信息
  *
  * @return void
  */
@@ -398,11 +398,11 @@ function filterArray($array)
 /**
  * curl 发送请求
  *
- * @param  string  $url     请求地址
- * @param  array   $params  请求参数
- * @param  string  $method  请求方式 默认 POST
- * @param  array   $options curl 配置信息
- * @param  integer $json    是否返回 json
+ * @param string  $url     请求地址
+ * @param array   $params  请求参数
+ * @param string  $method  请求方式 默认 POST
+ * @param array   $options curl 配置信息
+ * @param integer $json    是否返回 json
  *
  * @return array
  */
