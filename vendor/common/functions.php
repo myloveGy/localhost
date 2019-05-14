@@ -212,12 +212,12 @@ function getRandomStr($length = 16)
 }
 
 /**
- * [getSign description]
+ * 获取签名信息
  *
- * @param array  $params [description]
- * @param string $key    [description]
+ * @param array  $params 需要加密的数组
+ * @param string $key    加密的盐值
  *
- * @return [type]         [description]
+ * @return string        返回md5后字符串
  */
 function getSign($params = [], $key = 'NtuGEpZiKjfS91Fy')
 {
@@ -227,12 +227,12 @@ function getSign($params = [], $key = 'NtuGEpZiKjfS91Fy')
 }
 
 /**
- * [validateSign description]
+ * 验证签名
  *
- * @param  [type] $params [description]
- * @param  [type] $sign   [description]
+ * @param array  $params 验证的数组
+ * @param string $sign   验证的签名
  *
- * @return [type]         [description]
+ * @return boolean
  */
 function validateSign($params, $sign)
 {
@@ -283,13 +283,13 @@ function success($data, $msg = 'success')
     echoJson(['status' => 'success', 'code' => 200, 'msg' => $msg, 'data' => $data]);
 }
 
-if (!function_exists('get_value')) {
+if (!function_exists('getValue')) {
     /**
      * 获取数组的值
      *
-     * @param      $array
-     * @param      $key
-     * @param null $default
+     * @param array|mixed                $array
+     * @param string|array|Closure|mixed $key
+     * @param null                       $default
      *
      * @return mixed|null
      */
@@ -402,7 +402,7 @@ function filterArray($array)
  * @param array   $params  请求参数
  * @param string  $method  请求方式 默认 POST
  * @param array   $options curl 配置信息
- * @param integer $json    是否返回 json
+ * @param boolean $json    是否返回 json
  *
  * @return array
  */
