@@ -30,7 +30,7 @@ class VueController
         'index.html', '.git', '.gitignore',
         'ace.zip', 'vue-api.php', 'vhost.php',
         '.idea', '.DS_Store', 'css',
-        'js', 'static', 'php'
+        'js', 'static', 'php',
     ];
 
     // 允许显示的文件类型
@@ -89,7 +89,7 @@ class VueController
                 'name' => $filename === 'test.php' ? '测试脚本' : $filename,
             ];
 
-            if (strpos($filename, '.')) {
+            if (is_file($filename)) {
                 if (in_array(strrchr($filename, '.'), static::FILE_EXTENSIONS)) {
                     $arrFiles['lists'][] = $arrTmp;
                 }
