@@ -1,10 +1,5 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: love
- * Date: 2016/11/5
- * Time: 15:16
- */
+
 namespace session;
 
 class Db extends Main

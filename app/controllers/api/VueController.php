@@ -1,12 +1,4 @@
 <?php
-/**
- *
- * WebController.php
- *
- * Author: jinxing.liu@verystar.cn
- * Create: 2019-05-13 09:37
- * Editor: created by PhpStorm
- */
 
 namespace app\controllers\api;
 

@@ -1,13 +1,6 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: love
- * Date: 2016/11/5
- * Time: 22:43
- */
 
 namespace session;
-
 
 class Session
 {

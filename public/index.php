@@ -1,12 +1,5 @@
 <?php
-/**
- *
- * index.php
- *
- * Author: jinxing.liu@verystar.cn
- * Create: 2019-05-10 16:28
- * Editor: created by PhpStorm
- */
+
 include '../vendor/autoload/autoload.php';
 
 $config = include '../config/main.php';
