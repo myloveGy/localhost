@@ -6,6 +6,6 @@ class IndexController
 {
     public function actionIndex()
     {
-        success([]);
+        success(['key' => getRandomStr(32)]);
     }
 }

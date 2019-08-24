@@ -62,4 +62,18 @@ class Helper
 
         return $strIpAddress;
     }
+
+       /**
+     * 通过指定字符串拆分数组，然后各个元素首字母，最后拼接
+     *
+     * @example $strName = 'yii_user_log',$and = '_', return YiiUserLog
+     * @param string $strName 字符串
+     * @param string $and 拆分的字符串(默认'_')
+     * @return string
+     */
+    public static function strToUpperWords($strName, $and = '_')
+    {
+        $strReturn = ucwords(str_replace($and, ' ', $strName));
+        return str_replace(' ', '', $strReturn);
+    }
 }
