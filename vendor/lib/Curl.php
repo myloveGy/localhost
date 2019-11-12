@@ -5,14 +5,21 @@ namespace Lib;
 /**
  * Class Curl 基础的curl 请求类
  *
+ * @method int|mixed getError() 获取错误编号
+ * @method null|string getErrorInfo() 获取错误信息
+ * @method null|mixed getBody() 获取请求结果
+ * @method Curl setTimeout($time) 设置超时时间
+ * @method Curl setIsAjax($isAjax) 设置是否为ajax请求
+ * @method Curl setIsJson($isJson) 设置是否为json请求(header 添加json, 请求数组会转json)
+ * @method Curl setReferer($referer) 在HTTP请求头中"Referer: "的内容
  * @package Lib
  */
 class Curl
 {
     /**
-     * @var curl
+     * @var array 请求header
      */
-    private $ch;
+    private $header = [];
 
     /**
      * @var int 超时时间
@@ -25,14 +32,39 @@ class Curl
     private $isAjax = false;
 
     /**
+     * @var bool 是否 json 请求
+     */
+    private $isJson = false;
+
+    /**
      * @var null
      */
     private $referer = null;
 
     /**
-     * @var string|int|mixed 错误
+     * @var bool 开启ssl
      */
-    private $curlError;
+    private $sslVerify = false;
+
+    /**
+     * @var string ssl cert 文件地址
+     */
+    private $sslCertFile = '';
+
+    /**
+     * @var string ssl key 文件地址
+     */
+    private $sslKeyFile = '';
+
+    /**
+     * @var curl
+     */
+    private $ch;
+
+    /**
+     * @var string|int|mixed 错误编号
+     */
+    private $error;
 
     /**
      * @var string|mixed 错误信息
@@ -45,14 +77,9 @@ class Curl
     private $body;
 
     /**
-     * @var
+     * @var curl 句柄信息
      */
-    private $header;
-
-    /**
-     * @var array 请求header
-     */
-    private $httpHeader = [];
+    private $info;
 
     /**
      * @var string 请求地址
@@ -67,64 +94,111 @@ class Curl
     /**
      * @var array|mixed 请求数据
      */
-    private $postData;
+    private $requestData;
 
     /**
-     * Verify SSL Cert.
-     * @ignore
+     * @var array 默认配置项
      */
-    private $sslVerify   = false;
-    private $sslCertFile = '';
-    private $sslKeyFile  = '';
+    private $options = [
+        CURLOPT_USERAGENT      => 'Mozilla/4.0+(compatible;+MSIE+6.0;+Windows+NT+5.1;+SV1)',   // 用户访问代理 User-Agent
+        CURLOPT_HEADER         => 0,
+        CURLOPT_FOLLOWLOCATION => 0, // 跟踪301
+        CURLOPT_RETURNTRANSFER => 1, // 返回结果
+        CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4, // 默认使用IPV4
+    ];
 
     /**
-     * 发送请求信息
+     * @var array curl 额外参数，优先级最高
+     */
+    private $curlOptions = [];
+
+    /**
+     * 允许在初始化的时候设置属性信息
+     *
+     * Curl constructor.
+     *
+     * @param array $config
+     */
+    public function __construct(array $config = [])
+    {
+        foreach ($config as $attribute => $value) {
+            // 特殊属性不允许设置
+            if (in_array($attribute, [
+                'ch', 'error', 'errorInfo',      // curl 相关
+                'body', 'info',                  // 响应相关
+                'url', 'method', 'requestData',  // 请求相关
+            ])) {
+                continue;
+            }
+
+            // 存在的属性，设置
+            if (isset($this->$attribute)) {
+                $this->$attribute = $value;
+            }
+        }
+    }
+
+    /**
+     * 发送get 请求
      *
      * @param string $url    请求地址
-     * @param string $method 请求方法
-     * @param string $data   请求数据
+     * @param array  $params 请求参数
      *
      * @return $this
      */
-    private function exec($url, $method = 'GET', $data = '')
+    public function get($url, $params = [])
     {
-        if (!$url) {
-            throw new \RuntimeException('CURL url is null:' . __FILE__);
+        // 拼接请求参数
+        if (!empty($params)) {
+            $params = is_array($params) ? http_build_query($params) : $params;
+            $url    .= $params;
         }
 
-        $this->ch = curl_init();
-        $this->defaultOptions($this->ch, $url);
-        curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
+        return $this->exec($url);
+    }
 
-        if ($data) {
-            $postFields = is_array($data) ? http_build_query($data) : $data;
-            curl_setopt($this->ch, CURLOPT_POSTFIELDS, $postFields);
-        }
+    /**
+     * 发送post 请求
+     *
+     * @param string       $url  请求地址
+     * @param array|string $data 请求数据
+     *
+     * @return $this
+     */
+    public function post($url, $data)
+    {
+        return $this->exec($url, 'POST', $data);
+    }
 
-        if ($this->httpHeader) {
-            curl_setopt($this->ch, CURLOPT_HTTPHEADER, $this->httpHeader);
-        }
+    /**
+     * 发送 DELETE 请求
+     *
+     * @param string $url 请求地址
+     *
+     * @return $this
+     */
+    public function delete($url)
+    {
+        return $this->exec($url, 'DELETE');
+    }
 
-        $this->body      = curl_exec($this->ch);
-        $this->curlError = curl_errno($this->ch);
-        $this->header    = curl_getinfo($this->ch);
-        $this->errorInfo = curl_error($this->ch);
-
-        if (is_resource($this->ch)) {
-            curl_close($this->ch);
-        }
-
-        $this->url      = $url;
-        $this->method   = $method;
-        $this->postData = $data;
-
-        return $this;
+    /**
+     * 发送PUT 请求
+     *
+     * @param string $url  请求地址
+     * @param array  $data 请求数据
+     *
+     * @return $this
+     */
+    public function put($url, $data)
+    {
+        return $this->exec($url, 'PUT', $data);
     }
 
     /**
      * 重试次数 $this->get()->retry(2)
      *
-     * @param $num
+     * @param integer $num 重试次数
      *
      * @return $this
      */
@@ -136,11 +210,13 @@ class Curl
                     break;
                 }
 
-                $this->exec($this->url, $this->method, $this->post_data);
+                // 重新发送请求
+                $this->exec($this->url, $this->method, $this->requestData);
 
                 if (!$this->getError()) {
                     break;
                 }
+
                 $num--;
             }
         }
@@ -148,63 +224,9 @@ class Curl
         return $this;
     }
 
-    public function setSSLFile($cert_file, $key_file)
-    {
-
-        $this->ssl_verifypeer = true;
-        if (is_file($cert_file)) {
-            $this->ssl_cert_file = $cert_file;
-        }
-
-        if (is_file($key_file)) {
-            $this->ssl_key_file = $key_file;
-        }
-    }
-
-    //网页内容抓取
-    public function get($url)
-    {
-        return $this->exec($url);
-    }
-
-    //监控统计
-    private function log($url)
-    {
-    }
-
-    public function debug()
-    {
-        return [
-            'URL'    => $this->url,
-            '状态'     => $this->getStatusCode(), // http_code
-            '请求耗时'   => $this->getRequestTime(), //request_time
-            '错误码'    => $this->getError(), //errno
-            'Header' => $this->getHeader(), //errno
-        ];
-    }
-
-    // curl Post数据
-    public function post($url, $data)
-    {
-        return $this->exec($url, 'POST', $data);
-    }
-
-    // REST DELETE
-    public function delete($url)
-    {
-        return $this->exec($url, 'DELETE');
-    }
-
-    // REST PUT
-    public function put($url, $data)
-    {
-        return $this->exec($url, 'PUT', $data);
-    }
-
     public function multi($urls)
     {
-        $mh = curl_multi_init();
-
+        $mh   = curl_multi_init();
         $conn = $contents = [];
 
         // 初始化  
@@ -230,119 +252,229 @@ class Curl
         return $contents;
     }
 
-
-    private function defaultOptions(&$ch, $url)
+    /**
+     * 设置请求头信息
+     *
+     * @param array $headers 设置的信息
+     *
+     * @return Curl
+     */
+    public function setHeader(array $headers)
     {
-        $userAgent = 'Mozilla/4.0+(compatible;+MSIE+6.0;+Windows+NT+5.1;+SV1)';
-
-        if ($this->referer = null) {
-            curl_setopt($ch, CURLOPT_REFERER, $this->referer); //设置 referer
-        }
-
-        curl_setopt($ch, CURLOPT_URL, $url); //设置访问的url地址
-        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout); //设置超时
-        curl_setopt($ch, CURLOPT_USERAGENT, $userAgent); //用户访问代理 User-Agent
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0); //跟踪301
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); //返回结果
-        if (substr($url, 0, 5) == 'https') {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        }
-
-        if ($this->is_ajax) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-Requested-With: XMLHttpRequest", "X-Prototype-Version:1.5.0"));
-        }
-
-        curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-
-        if ($this->ssl_verifypeer && $this->ssl_cert_file && $this->ssl_key_file) {
-            //还原
-            $this->ssl_verifypeer = false;
-            //设置证书
-            //使用证书：cert 与 key 分别属于两个.pem文件
-            //默认格式为PEM，可以注释
-            curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'PEM');
-            curl_setopt($ch, CURLOPT_SSLCERT, $this->ssl_cert_file);
-            //默认格式为PEM，可以注释
-            curl_setopt($ch, CURLOPT_SSLKEYTYPE, 'PEM');
-            curl_setopt($ch, CURLOPT_SSLKEY, $this->ssl_key_file);
-        }
-    }
-
-    public function getError()
-    {
-        return $this->curl_error;
-    }
-
-    public function getErrorInfo()
-    {
-        return $this->curl_error;
-    }
-
-    public function getBody()
-    {
-        return $this->body;
-    }
-
-    public function setHeader($headers)
-    {
-        $this->http_header = $headers;
-    }
-
-    public function getHeader($key = null)
-    {
-        if ($key !== null) {
-            return isset($this->header[$key]) ? $this->header : null;
-        } else {
-            return $this->header;
-        }
-    }
-
-    public function getStatusCode()
-    {
-        return $this->header['http_code'];
+        $this->header += $headers;
+        return $this;
     }
 
     /**
-     * namelookup_time：DNS 解析域名的时间
-     * connect_time：连接时间,从开始到建立TCP连接完成所用时间,包括前边DNS解析时间，如果需要单纯的得到连接时间，用这个time_connect时间减去前边time_namelookup时间。
-     * pretransfer_time：从开始到准备传输的时间。
-     * time_commect：client和server端建立TCP 连接的时间 里面包括DNS解析的时间
-     * starttransfer_time：从client发出请求；到web的server 响应第一个字节的时间 包括前面的2个时间
-     * redirect_time：重定向时间，包括到最后一次传输前的几次重定向的DNS解析，连接，预传输，传输时间。
-     * total_time：总时间
+     * 设置选项
      *
-     * @param $time_key
+     * @param string|array $options 设置项
+     * @param null|mixed   $value
+     *
+     * @return Curl
+     */
+    public function setOptions($options, $value = null)
+    {
+        if (!is_array($options)) {
+            $options = [$options => $value];
+        }
+
+        // 设置选项
+        foreach ($options as $option => $value) {
+            $this->curlOptions[$option] = $value;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 设置SSL文件
+     *
+     * @param string $certFile 证书文件
+     * @param string $keyFile  秘钥文件
+     *
+     * @return $this
+     */
+    public function setSSLFile($certFile, $keyFile)
+    {
+        $this->sslVerify = true;
+        if (is_file($certFile)) {
+            $this->sslCertFile = $certFile;
+        }
+
+        if (is_file($keyFile)) {
+            $this->sslKeyFile = $keyFile;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 获取curl info 信息
+     *
+     * @param null $key 获取的字段信息
+     *
+     * @return mixed|null
+     */
+    public function getInfo($key = null)
+    {
+        if ($key !== null) {
+            return isset($this->info[$key]) ? $this->info : null;
+        }
+
+        return $this->info;
+    }
+
+    /**
+     * 获取状态码
      *
      * @return mixed
      */
-    public function getRequestTime($time_key = 'total_time')
+    public function getStatusCode()
     {
-        return $this->header[$time_key];
+        return $this->getInfo('http_code');
     }
 
-    public function setReferer($url)
+    /**
+     * 获取请求时间
+     *
+     * @param string $timeKey
+     *
+     * @return mixed
+     */
+    public function getRequestTime($timeKey = 'total_time')
     {
-        $this->referer = $url;
-        return $this;
+        return $this->getInfo($timeKey);
     }
 
-    public function setAjax()
+    /**
+     * 运行方法
+     *
+     * @param $name
+     * @param $arguments
+     *
+     * @return $this
+     */
+    public function __call($name, $arguments)
     {
-        $this->is_ajax = true;
-        return $this;
+        // 指定设置方法
+        if (in_array($name, ['setIsAjax', 'setTimeout', 'setReferer', 'setIsJson'], true)) {
+            $attribute        = ucfirst(ltrim($name, 'set'));
+            $this->$attribute = $arguments[0];
+            return $this;
+        } else if (in_array($name, ['getError', 'getErrorInfo', 'getBody'])) {
+            // 获取指定数据信息
+            $attribute = ucfirst(ltrim($name, 'get'));
+            return $this->$attribute;
+        }
+
+        throw new \RuntimeException('Curl not has method: ' . $name);
     }
 
-    public function setTimeout($second = 5)
+    /**
+     * 设置默认选项
+     *
+     * @param resource $ch  设置的curl
+     * @param string   $url 请求地址
+     */
+    private function defaultOptions(&$ch, $url)
     {
-        $this->timeout = $second;
-        return $this;
+        // 设置 referer
+        if ($this->referer) {
+            $this->options[CURLOPT_REFERER] = $this->referer;
+        }
+
+        $this->options[CURLOPT_URL]     = $url;           // 设置访问的url地址
+        $this->options[CURLOPT_TIMEOUT] = $this->timeout; // 设置超时
+
+        // Https 关闭 ssl 验证
+        if (substr($url, 0, 5) == 'https') {
+            $this->options[CURLOPT_SSL_VERIFYPEER] = false;
+            $this->options[CURLOPT_SSL_VERIFYHOST] = false;
+        }
+
+        // 设置ajax
+        if ($this->isAjax) {
+            $this->header += ['X-Requested-With: XMLHttpRequest', 'X-Prototype-Version:1.5.0'];
+        }
+
+        // 设置 json 请求
+        if ($this->isJson) {
+            $this->header += ['Content-Type: application/json'];
+        }
+
+        // 设置证书 使用证书：cert 与 key 分别属于两个.pem文件
+        if ($this->sslVerify && $this->sslCertFile && $this->sslKeyFile) {
+            // 还原
+            $this->sslVerify = false;
+
+            // 默认格式为PEM，可以注释
+            $this->options[CURLOPT_SSLCERTTYPE] = 'PEM';
+            $this->options[CURLOPT_SSLCERT]     = $this->sslCertFile;
+
+            // 默认格式为PEM，可以注释
+            $this->options[CURLOPT_SSLKEYTYPE] = 'PEM';
+            $this->options[CURLOPT_SSLKEY]     = $this->sslKeyFile;
+        }
+
+        // 设置HTTP header 信息
+        if ($this->header) {
+            $this->options[CURLOPT_HTTPHEADER] = $this->header;
+        }
+
+        // 一次性设置
+        curl_setopt_array($ch, $this->options);
     }
 
-    public function setLog($is_log)
+    /**
+     * 发送请求信息
+     *
+     * @param string       $url    请求地址
+     * @param string       $method 请求方法
+     * @param string|array $data   请求数据
+     *
+     * @return $this
+     */
+    private function exec($url, $method = 'GET', $data = '')
     {
-        $this->is_log = $is_log;
+        if (!$url) {
+            throw new \RuntimeException('CURL url is null:' . __FILE__);
+        }
+
+        $this->ch = curl_init();
+        $this->defaultOptions($this->ch, $url);
+        curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
+
+        // 存在数据
+        if ($data) {
+            // 数组的话、需要转为字符串
+            if (is_array($data)) {
+                $postFields = $this->isJson ? json_encode($data, 320) : http_build_query($data);
+            } else {
+                $postFields = $data;
+            }
+
+            curl_setopt($this->ch, CURLOPT_POSTFIELDS, $postFields);
+        }
+
+        // 存在curlOptions
+        if ($this->curlOptions) {
+            curl_setopt_array($this->ch, $this->curlOptions);
+        }
+
+        // 赋值
+        $this->url         = $url;
+        $this->method      = $method;
+        $this->requestData = $data;
+        $this->body        = curl_exec($this->ch);
+        $this->error       = curl_errno($this->ch);
+        $this->info        = curl_getinfo($this->ch);
+        $this->errorInfo   = curl_error($this->ch);
+
+        if (is_resource($this->ch)) {
+            curl_close($this->ch);
+        }
+
         return $this;
     }
 }
