@@ -8,6 +8,7 @@ namespace Lib;
  * @method int|mixed getError() 获取错误编号
  * @method null|string getErrorInfo() 获取错误信息
  * @method null|mixed getBody() 获取请求结果
+ * @method array getOptions() 获取curl设置的配置项
  * @method Curl setTimeout($time) 设置超时时间
  * @method Curl setIsAjax($isAjax) 设置是否为ajax请求
  * @method Curl setIsJson($isJson) 设置是否为json请求(header 添加json, 请求数组会转json)
@@ -151,7 +152,14 @@ class Curl
         // 拼接请求参数
         if (!empty($params)) {
             $params = is_array($params) ? http_build_query($params) : $params;
-            $url    .= $params;
+            // 判断不存在?
+            if (strrpos($url, '?') === false) {
+                $url .= '?';
+            } else if (!in_array(substr($url, -1, 1), ['?', '&'], true)) {
+                $url .= '&';
+            }
+
+            $url .= $params;
         }
 
         return $this->exec($url);
@@ -255,13 +263,24 @@ class Curl
     /**
      * 设置请求头信息
      *
-     * @param array $headers 设置的信息
+     * @param array|string $headers 设置的信息
      *
      * @return Curl
      */
-    public function setHeader(array $headers)
+    public function setHeader($headers)
     {
-        $this->header += $headers;
+        if (!is_array($headers)) {
+            $headers = func_get_args();
+        }
+
+        foreach ($headers as $header) {
+            if (in_array($header, $this->header)) {
+                continue;
+            }
+
+            $this->header[] = $header;
+        }
+
         return $this;
     }
 
@@ -377,12 +396,12 @@ class Curl
     {
         // 指定设置方法
         if (in_array($name, ['setIsAjax', 'setTimeout', 'setReferer', 'setIsJson'], true)) {
-            $attribute        = ucfirst(ltrim($name, 'set'));
+            $attribute        = lcfirst(ltrim($name, 'set'));
             $this->$attribute = $arguments[0];
             return $this;
-        } else if (in_array($name, ['getError', 'getErrorInfo', 'getBody'])) {
+        } else if (in_array($name, ['getError', 'getErrorInfo', 'getBody', 'getOptions'])) {
             // 获取指定数据信息
-            $attribute = ucfirst(ltrim($name, 'get'));
+            $attribute = lcfirst(ltrim($name, 'get'));
             return $this->$attribute;
         }
 
@@ -392,10 +411,10 @@ class Curl
     /**
      * 设置默认选项
      *
-     * @param resource $ch  设置的curl
+     * @param resource $ch  curl 资源
      * @param string   $url 请求地址
      */
-    private function defaultOptions(&$ch, $url)
+    private function defaultOptions($ch, $url)
     {
         // 设置 referer
         if ($this->referer) {
@@ -413,12 +432,12 @@ class Curl
 
         // 设置ajax
         if ($this->isAjax) {
-            $this->header += ['X-Requested-With: XMLHttpRequest', 'X-Prototype-Version:1.5.0'];
+            $this->setHeader('X-Requested-With: XMLHttpRequest', 'X-Prototype-Version: 1.5.0');
         }
 
         // 设置 json 请求
         if ($this->isJson) {
-            $this->header += ['Content-Type: application/json'];
+            $this->setHeader('Content-Type: application/json');
         }
 
         // 设置证书 使用证书：cert 与 key 分别属于两个.pem文件
@@ -440,7 +459,14 @@ class Curl
             $this->options[CURLOPT_HTTPHEADER] = $this->header;
         }
 
-        // 一次性设置
+        // 存在curlOptions
+        if ($this->curlOptions) {
+            foreach ($this->curlOptions as $option => $value) {
+                $this->options[$option] = $value;
+            }
+        }
+
+        // 一次性设置属性
         curl_setopt_array($ch, $this->options);
     }
 
@@ -459,9 +485,9 @@ class Curl
             throw new \RuntimeException('CURL url is null:' . __FILE__);
         }
 
-        $this->ch = curl_init();
-        $this->defaultOptions($this->ch, $url);
-        curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
+        // 初始化CURL
+        $this->ch                             = curl_init(); // CURL
+        $this->options[CURLOPT_CUSTOMREQUEST] = $method;     // 请求方法
 
         // 存在数据
         if ($data) {
@@ -472,13 +498,11 @@ class Curl
                 $postFields = $data;
             }
 
-            curl_setopt($this->ch, CURLOPT_POSTFIELDS, $postFields);
+            $this->options[CURLOPT_POSTFIELDS] = $postFields;
         }
 
-        // 存在curlOptions
-        if ($this->curlOptions) {
-            curl_setopt_array($this->ch, $this->curlOptions);
-        }
+        // 一次性设置
+        $this->defaultOptions($this->ch, $url);
 
         // 赋值
         $this->url         = $url;
