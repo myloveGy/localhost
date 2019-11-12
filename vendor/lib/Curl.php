@@ -348,6 +348,24 @@ class Curl
     }
 
     /**
+     * 获取整个请求的数组信息
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        return [
+            'url'          => $this->url,
+            'method'       => $this->method,
+            'request_data' => $this->requestData,
+            'body'         => $this->body,
+            'error'        => $this->error,
+            'error_info'   => $this->errorInfo,
+            'info'         => $this->info,
+        ];
+    }
+
+    /**
      * 运行方法
      *
      * @param $name
@@ -468,8 +486,8 @@ class Curl
         $this->requestData = $data;
         $this->body        = curl_exec($this->ch);
         $this->error       = curl_errno($this->ch);
-        $this->info        = curl_getinfo($this->ch);
         $this->errorInfo   = curl_error($this->ch);
+        $this->info        = curl_getinfo($this->ch);
 
         if (is_resource($this->ch)) {
             curl_close($this->ch);
