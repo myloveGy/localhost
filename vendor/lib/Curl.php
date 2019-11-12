@@ -338,7 +338,7 @@ class Curl
     public function getInfo($key = null)
     {
         if ($key !== null) {
-            return isset($this->info[$key]) ? $this->info : null;
+            return isset($this->info[$key]) ? $this->info[$key] : null;
         }
 
         return $this->info;
