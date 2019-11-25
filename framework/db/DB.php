@@ -150,6 +150,10 @@ class DB
     {
         $this->sql = $sql;
         $smt       = self::$pdo->prepare($this->sql);
+        if (empty($smt)) {
+            return false;
+        }
+
         $smt->execute($bind);
         return $smt;
     }
