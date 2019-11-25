@@ -1,0 +1,19 @@
+{
+    "name": "jinxing/app",
+    "description": "一个简单应用",
+    "authors": [
+        {
+            "name": "jinxing.liu",
+            "email": "821901008@qq.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "App\\": "app"
+        },
+        "files": [
+            "helpers/helpers.php"
+        ]
+    }
+}
