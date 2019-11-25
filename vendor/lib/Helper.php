@@ -4,22 +4,17 @@ namespace lib;
 
 class Helper
 {
-	/**
-	 * @var int json默认配置 JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-	 */
-	const JSON_OPTIONS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
 
 	/**
 	 * json encode 处理中文处理
 	 * 
 	 * @param  mixed $mixed  转义数据
-	 * @param  int $options 转义配置
 	 *
 	 * @return string 返回json字符串
 	 */
-	public static function encode($mixed, $options = self::JSON_OPTIONS) 
+	public static function encode($mixed) 
 	{
-		return json_encode($mixed, $options);
+		return json_encode($mixed, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 	}
 
 	/**

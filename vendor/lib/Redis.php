@@ -24,20 +24,24 @@ class Redis
      */
     public static function getInstance($options = [])
     {
-        if (self::$redis == null) {
-            // 处理配置信息
-            if ($options) self::$options = array_merge(self::$options, $options);
-
-            // 实例化对象
-            self::$redis = new \Redis();
-            self::$redis->connect(self::$options['host'], self::$options['port']);
-
-            // 需要授权
-            if (isset(self::$options['auth']) && ! empty(self::$options['auth'])) {
-                self::$redis->auth(self::$options['auth']);
-            }
+        if (self::$redis) {
+            return self::$redis;
+        }
+        
+        // 处理配置信息
+        if ($options) {
+            self::$options = array_merge(self::$options, $options);
         }
 
+        // 实例化对象
+        self::$redis = new \Redis();
+        self::$redis->connect(self::$options['host'], self::$options['port']);
+
+        // 需要授权
+        if (isset(self::$options['auth']) && ! empty(self::$options['auth'])) {
+            self::$redis->auth(self::$options['auth']);
+        }
+        
         return self::$redis;
     }
 }
