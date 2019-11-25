@@ -1,68 +1,55 @@
 <?php
+/**
+ *
+ * Query.php
+ *
+ * Author: jinxing.liu
+ * Create: 2019/11/25 18:23
+ * Editor: created by PhpStorm
+ */
 
-namespace jinxing\framework\lib;
+namespace jinxing\framework\db;
 
-class Pdo
+/**
+ * Class Query 查询类
+ *
+ * @package jinxing\framework\db
+ */
+class Query
 {
-    /**
-     * @var null|\PDO
-     */
-    private static $pdo = null;
-
     /**
      * @var string 执行最后的sql
      */
-    public $lastSql = '';
+    private $lastSql = '';
 
     /**
      * @var string 查询的字段
      */
-    public $select = '*';
+    private $select = '*';
 
     /**
      * @var string 查询的条件
      */
-    public $where = '';
+    private $where = '';
 
     /**
      * 查询的表
      *
      * @var string
      */
-    public $table = '';
+    private $table = '';
 
     /**
      * 查询的limit
      *
      * @var string
      */
-    public $limit = '';
-
-    /**
-     * 是否查询多条
-     *
-     * @var boolean
-     */
-    public $all = false;
-
-    /**
-     * @var array 查询条件
-     */
-    public $condition = [];
+    private $limit = '';
 
     /**
      * @var array 绑定的参数
      */
-    public $bind = [];
-
-    /**
-     * @var array 默认配置信息
-     */
-    private static $options = [
-        'dns'      => 'mysql:host=127.0.0.1;port=3306;charset=utf8',
-        'username' => 'root',
-        'password' => '',
-    ];
+    private $bind = [];
 
     /**
      * @var array 绑定参数次数
@@ -70,62 +57,15 @@ class Pdo
     private $bindCount = [];
 
     /**
-     * Pdo constructor. 私有构造方法
-     */
-    private function __construct()
-    {
-    }
-
-    /**
-     *
-     */
-    private function __clone()
-    {
-
-    }
-
-    /**
-     * getInstance() 获取 db 信息
-     *
-     * @param array $options
-     *
-     * @return Pdo
-     */
-    public static function getInstance($options = [])
-    {
-        if (self::$pdo == null) {
-            // 处理配置信息
-            if ($options) {
-                self::$options = array_merge(self::$options, $options);
-            }
-
-            // 实例化对象
-            self::$pdo = new \PDO(self::$options['dns'], self::$options['username'], self::$options['password']);
-        }
-
-        return new self;
-    }
-
-    /**
      * 执行新增数据
      *
-     * @param string $table  新增数据的表
-     * @param array  $insert 新增的数组[字段 => 值]
+     * @param array $insert 新增的数组[字段 => 值]
      *
      * @return bool|string
      */
-    public function insert($table, array $insert)
+    public function insert(array $insert)
     {
-        $keys       = array_keys($insert);
-        $bindParams = array_pad([], count($keys), '?');
-        // 执行的SQL
-        $this->lastSql = 'INSERT INTO `' . $table . '` (' . implode(', ', $keys) . ') VALUES (' . implode(', ', $bindParams) . ')';
-        $smt           = self::$pdo->prepare($this->lastSql);
-        if ($mixReturn = $smt->execute(array_values($insert))) {
-            $mixReturn = self::$pdo->lastInsertId();
-        }
 
-        return $mixReturn;
     }
 
     /**
@@ -147,11 +87,6 @@ class Pdo
         }
 
         $this->lastSql = 'UPDATE `' . $table . '` SET ' . implode($update_bind, ', ') . $this->where;
-        $smt           = self::$pdo->prepare($this->lastSql);
-        if ($mixed = $smt->execute($this->bind)) {
-            $mixed = $smt->rowCount();
-        }
-
         return $mixed;
     }
 
@@ -398,14 +333,18 @@ class Pdo
         return $this;
     }
 
+    /**
+     * 重置类
+     *
+     * @return $this
+     */
     public function reset()
     {
-        $this->where     = '';
+        $this->select    = '*';
+        $this->where     = [];
         $this->bind      = [];
         $this->bindCount = [];
         $this->limit     = '';
-        $this->select    = '*';
-        $this->condition = [];
         return $this;
     }
 

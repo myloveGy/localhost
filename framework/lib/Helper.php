@@ -71,4 +71,79 @@ class Helper
         $strReturn = ucwords(str_replace($and, ' ', $strName));
         return str_replace(' ', '', $strReturn);
     }
+
+     /**
+     * 获取数组的值
+     *
+     * @param array|mixed                $array
+     * @param string|array|Closure|mixed $key
+     * @param null                       $default
+     *
+     * @return mixed|null
+     */
+    public static function getValue($array, $key, $default = null)
+    {
+        if ($key instanceof \Closure) {
+            return $key($array, $default);
+        }
+
+        if (is_array($key)) {
+            $lastKey = array_pop($key);
+            foreach ($key as $keyPart) {
+                $array = static::getValue($array, $keyPart);
+            }
+            $key = $lastKey;
+        }
+
+        if (is_array($array) && (isset($array[$key]) || array_key_exists($key, $array))) {
+            return $array[$key];
+        }
+
+        if (($pos = strrpos($key, '.')) !== false) {
+            $array = static::getValue($array, substr($key, 0, $pos), $default);
+            $key   = substr($key, $pos + 1);
+        }
+
+        if (is_object($array)) {
+            return $array->$key;
+        } elseif (is_array($array)) {
+            return (isset($array[$key]) || array_key_exists($key, $array)) ? $array[$key] : $default;
+        }
+
+        return $default;
+    }
+
+    /**
+     * 判断数组是否为关联数组
+     *
+     * @param array $array      需要判断的数组
+     * @param bool  $allStrings whether the array keys must be all strings in order for
+     *                          the array to be treated as associative.
+     *
+     * @return bool 是关联数组返回true
+     */
+    public static function isAssociative($array, $allStrings = true)
+    {
+        if (!is_array($array) || empty($array)) {
+            return false;
+        }
+
+        if ($allStrings) {
+            foreach ($array as $key => $value) {
+                if (!is_string($key)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        foreach ($array as $key => $value) {
+            if (is_string($key)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
