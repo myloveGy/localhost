@@ -10,6 +10,8 @@
 
 namespace jinxing\framework\db;
 
+use jinxing\framework\lib\Helper;
+
 /**
  * Class Query 查询类
  *
@@ -18,9 +20,14 @@ namespace jinxing\framework\db;
 class Query
 {
     /**
+     * @var null|DB 查询的db
+     */
+    private $db = null;
+
+    /**
      * @var string 执行最后的sql
      */
-    private $lastSql = '';
+    private $sql = '';
 
     /**
      * @var string 查询的字段
@@ -30,7 +37,7 @@ class Query
     /**
      * @var string 查询的条件
      */
-    private $where = '';
+    private $where = [];
 
     /**
      * 查询的表
@@ -57,122 +64,59 @@ class Query
     private $bindCount = [];
 
     /**
-     * 查询数据全部数据
+     * Query constructor.
      *
-     * @param string $table  查询的表格
-     * @param array  $where  查询条件
-     * @param string $fields 查询的字段
-     *
-     * @return array
+     * @param DB $db
      */
-    public function findAll($table, $where = [], $fields = '*')
+    public function __construct(DB $db)
     {
-        $this->bind = $this->condition = [];
-        $this->select($fields);
-        $this->buildQuery($where);
-        $this->lastSql = 'SELECT ' . $this->select . ' FROM `' . $table . '` ' . $this->where;
-        $smt           = self::$pdo->prepare($this->lastSql);
-        $smt->execute($this->bind);
-        return $smt->fetchAll(\PDO::FETCH_ASSOC);
+        return $this->db = $db;
     }
 
     /**
-     * 查询多条的单个字段数组
+     * 查询单条数据
      *
-     * @param string $table  查询的表
-     * @param array  $where  查询的条件
-     * @param string $column 查询的字段
-     *
-     * @return void
+     * @return mixed
+     * @throws \Exception
      */
-    public function findAllBy($table, $where = [], $column)
-    {
-        if ($all = $this->findAll($table, $where, $column)) {
-            return array_column($all, $column);
-        }
-
-        return [];
-    }
-
-    /**
-     * 查询数据一条数据
-     *
-     * @param string $table  查询的表格
-     * @param array  $where  查询条件
-     * @param string $fields 查询的字段
-     *
-     * @return array
-     */
-    public function findOne($table, $where = [], $fields = '*')
-    {
-        $this->bind = $this->condition = [];
-        $this->select($fields);
-        $this->buildQuery($where);
-        $this->lastSql = 'SELECT ' . $this->select . ' FROM `' . $table . '` ' . $this->where . ' LIMIT 1';
-        $smt           = self::$pdo->prepare($this->lastSql);
-        $smt->execute($this->bind);
-        return $smt->fetch(\PDO::FETCH_ASSOC);
-    }
-
-    /**
-     *
-     * 查询单个字段信息
-     *
-     * @param string $table  查询的表
-     * @param array  $where  查询的条件
-     * @param string $column 查询的字段
-     *
-     * @return bool|mixed
-     */
-    public function findBy($table, $where, $column)
-    {
-        if ($one = $this->findOne($table, $where, [$column])) {
-            return isset($one[$column]) ? $one[$column] : false;
-        }
-
-        return false;
-    }
-
-    public function query()
-    {
-        $this->buildQuery();
-        $this->lastSql = "SELECT {$this->select} FROM {$this->table}{$this->where}{$this->limit}";
-        $smt           = self::$pdo->prepare($this->lastSql);
-        $smt->execute($this->bind);
-        return $this->all ? $smt->fetchAll(\PDO::FETCH_ASSOC) : $smt->fetch(\PDO::FETCH_ASSOC);
-    }
-
     public function one()
     {
-        $this->all   = false;
         $this->limit = ' LIMIT 1';
-        return $this->query();
+        return $this->buildQuery()->db->queryRow($this->sql, $this->bind);
     }
 
+    /**
+     * 查询多条数据
+     *
+     * @return mixed
+     * @throws \Exception
+     */
     public function all()
     {
-        $this->all = true;
-        return $this->query();
+        return $this->buildQuery()->db->query($this->sql, $this->bind);
     }
 
     /**
      * 查询的字段
      *
-     * @param string|array $field 查找的字段
+     * @param string|array $columns 查找的字段
      *
      * @return $this
      */
-    public function select($field = '*')
+    public function select($columns = '*')
     {
-        $field = is_string($field) ? explode(',', $field) : (array)$field;
-        foreach ($field as &$value) {
-            if ($value !== '*') {
-                $value = '`' . str_replace([' as ', ' AS '], '` as `', trim($value)) . '`';
-            }
+        if ($columns === '*') {
+            $this->select = '*';
+            return $this;
+        }
+
+        $columns = is_string($columns) ? explode(',', $columns) : (array)$columns;
+        foreach ($columns as &$value) {
+            $value = '`' . str_replace([' as ', ' AS '], '` as `', trim($value)) . '`';
         }
 
         unset($value);
-        $this->select = implode(', ', $field);
+        $this->select = implode(', ', $columns);
         return $this;
     }
 
@@ -212,9 +156,9 @@ class Query
         if (is_string($column)) {
             // operator 是字符串、那么是表达式
             if (is_string($operator)) {
-                $this->condition[] = $this->buildOperateCondition($column, $operator, $value);
+                $this->where[] = $this->buildOperateCondition($column, $operator, $value);
             } else {
-                $this->condition[] = $column;
+                $this->where[] = $column;
                 foreach ($operator as $k => $v) {
                     $this->bind[':' . $k] = $v;
                 }
@@ -231,12 +175,12 @@ class Query
 
         // 数组处理 ['and', ['user', '=', 2], ['user', '!=', 3]]
         if (isset($column[0])) {
-            $this->condition[] = $this->buildArrayCondition($column);
+            $this->where[] = $this->buildArrayCondition($column);
             return $this;
         }
 
         // hash format: 'column1' => 'value1', 'column2' => 'value'
-        $this->condition[] = $this->buildHasCondition($column);
+        $this->where[] = $this->buildHasCondition($column);
         return $this;
     }
 
@@ -287,10 +231,10 @@ class Query
     public function reset()
     {
         $this->select    = '*';
+        $this->limit     = '';
         $this->where     = [];
         $this->bind      = [];
         $this->bindCount = [];
-        $this->limit     = '';
         return $this;
     }
 
@@ -299,7 +243,7 @@ class Query
      *
      * @return string
      */
-    public function getLastSql()
+    public function getSql()
     {
         $search = [];
         foreach ($this->bind as $column => $bind_value) {
@@ -307,9 +251,7 @@ class Query
         }
 
         krsort($search);
-
-        var_dump($this->bind, $search, array_keys($search), array_values($search));
-        return str_replace(array_keys($search), array_values($search), $this->lastSql);
+        return str_replace(array_keys($search), array_values($search), $this->sql);
     }
 
     private function buildArrayCondition($columns, $and = 'AND')
@@ -422,7 +364,7 @@ class Query
      *
      * @param array $where
      *
-     * @return void
+     * @return $this
      */
     private function buildQuery($where = [])
     {
@@ -430,11 +372,14 @@ class Query
             $this->where($where);
         }
 
-        if (empty($this->condition)) {
+        if (empty($this->where)) {
             $this->where = '';
             $this->bind  = [];
         } else {
-            $this->where = ' WHERE ' . implode(' AND ', $this->condition);
+            $this->where = ' WHERE ' . implode(' AND ', $this->where);
         }
+
+        $this->sql = "SELECT {$this->select} FROM {$this->table}{$this->where}{$this->limit}";
+        return $this;
     }
 }

@@ -2,6 +2,11 @@
 
 namespace jinxing\framework\db;
 
+/**
+ * Class DB
+ *
+ * @package jinxing\framework\db
+ */
 class DB
 {
     /**
@@ -67,20 +72,22 @@ class DB
      * @param array  $insert 新增的数组[字段 => 值]
      *
      * @return bool|string
+     * @throws \Exception
      */
     public function insert($table, array $insert)
     {
-        $keys       = array_keys($insert);
-        $bindParams = array_pad([], count($keys), '?');
-
-        // 执行的SQL
-        $this->sql = 'INSERT INTO `' . $table . '` (' . implode(', ', $keys) . ') VALUES (' . implode(', ', $bindParams) . ')';
-        $smt       = self::$pdo->prepare($this->sql);
-        if ($mixReturn = $smt->execute(array_values($insert))) {
-            $mixReturn = self::$pdo->lastInsertId();
+        $keys = $bindKeys = $bind = [];
+        foreach ($insert as $key => $value) {
+            $keys[]          = "`{$key}`";
+            $bindKeys[]      = ":{$key}";
+            $bind[":{$key}"] = $value;
         }
 
-        return $mixReturn;
+        $keys = implode(', ', $keys);
+        // 执行的SQL
+        $sql = 'INSERT INTO `' . $table . '` (' . $keys . ') VALUES (' . implode(', ', $bindKeys) . ')';
+        $this->execute($sql, $bind);
+        return self::$pdo->lastInsertId();
     }
 
     /**
@@ -90,52 +97,66 @@ class DB
      * @param array|mixed $where  修改的添加
      * @param array       $update 修改的数据
      *
+     * @param array       $bind
+     *
      * @return bool|int
+     * @throws \Exception
      */
-    public function update($table, $where, array $update)
+    public function update($table, $where, array $update, $bind = [])
     {
-        $this->reset()->buildQuery($where);
-        $update_bind = [];
+        $attributes = [];
         foreach ($update as $key => $value) {
-            $bindName      = $this->bind($key, $value);
-            $update_bind[] = "`{$key}` = {$bindName}";
+            $bind[":{$key}"] = $value;
+            $attributes[]    = "`{$key}` = :{$key}";
         }
 
-        $this->lastSql = 'UPDATE `' . $table . '` SET ' . implode($update_bind, ', ') . $this->where;
-        $smt           = self::$pdo->prepare($this->lastSql);
-        if ($mixed = $smt->execute($this->bind)) {
-            $mixed = $smt->rowCount();
-        }
-
-        return $mixed;
+        $where = $where ? ' WHERE ' . $where : '';
+        $sql   = 'UPDATE `' . $table . '` SET ' . implode($attributes, ', ') . $where;
+        return $this->execute($sql, $bind)->rowCount();
     }
 
     /**
      * 删除数据
      *
-     * @param string      $table 删除的表
-     * @param array|mixed $where 删除的条件
+     * @param string $table 删除的表
+     * @param string $where 删除的条件
+     * @param array  $bind
      *
      * @return boolean|int
+     * @throws \Exception
      */
-    public function delete($table, $where)
+    public function delete($table, $where, $bind = [])
     {
-        $this->reset()->buildQuery($where);
-        $this->lastSql = 'DELETE FROM `' . $table . '`' . $this->where;
-        $smt           = self::$pdo->prepare($this->lastSql);
-        if ($mixed = $smt->execute($this->bind)) {
-            $mixed = $smt->rowCount();
-        }
-
-        return $mixed;
+        $where = $where ? ' WHERE ' . $where : '';
+        return $this->execute('DELETE FROM `' . $table . '`' . $where, $bind)->rowCount();
     }
 
-    public function query($sql, $bind)
+    /**
+     * 查询多条数据
+     *
+     * @param string $sql  查询SQL
+     * @param array  $bind 绑定的参数
+     *
+     * @return array
+     * @throws \Exception
+     */
+    public function query($sql, $bind = [])
     {
-        $this->sql = $sql;
-        $smt       = self::$pdo->prepare($this->sql);
-        $smt->execute($bind);
-        return $this->all ? $smt->fetchAll(\PDO::FETCH_ASSOC) : $smt->fetch(\PDO::FETCH_ASSOC);
+        return $this->execute($sql, $bind)->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * 查询一条数据
+     *
+     * @param string $sql  执行的SQL
+     * @param array  $bind 绑定的参数
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    public function queryRow($sql, $bind = [])
+    {
+        return $this->execute($sql, $bind)->fetch(\PDO::FETCH_ASSOC);
     }
 
     /**
@@ -145,16 +166,25 @@ class DB
      * @param array  $bind 绑定的参数
      *
      * @return bool|\PDOStatement
+     * @throws \Exception
      */
     public function execute($sql, $bind = [])
     {
         $this->sql = $sql;
         $smt       = self::$pdo->prepare($this->sql);
-        if (empty($smt)) {
-            return false;
+        if (!$smt->execute($bind)) {
+            $error = $smt->errorInfo();
+            throw new \Exception($error[2]);
         }
 
-        $smt->execute($bind);
         return $smt;
+    }
+
+    /**
+     * @return string 获取执行的SQL
+     */
+    public function getSql()
+    {
+        return $this->sql;
     }
 }
