@@ -72,9 +72,10 @@ class DB
     {
         $keys       = array_keys($insert);
         $bindParams = array_pad([], count($keys), '?');
+
         // 执行的SQL
-        $this->lastSql = 'INSERT INTO `' . $table . '` (' . implode(', ', $keys) . ') VALUES (' . implode(', ', $bindParams) . ')';
-        $smt           = self::$pdo->prepare($this->lastSql);
+        $this->sql = 'INSERT INTO `' . $table . '` (' . implode(', ', $keys) . ') VALUES (' . implode(', ', $bindParams) . ')';
+        $smt       = self::$pdo->prepare($this->sql);
         if ($mixReturn = $smt->execute(array_values($insert))) {
             $mixReturn = self::$pdo->lastInsertId();
         }
@@ -129,88 +130,27 @@ class DB
         return $mixed;
     }
 
-    /**
-     * 查询数据全部数据
-     *
-     * @param string $table  查询的表格
-     * @param array  $where  查询条件
-     * @param string $fields 查询的字段
-     *
-     * @return array
-     */
-    public function findAll($table, $where = [], $fields = '*')
-    {
-        $this->bind = $this->condition = [];
-        $this->select($fields);
-        $this->buildQuery($where);
-        $this->lastSql = 'SELECT ' . $this->select . ' FROM `' . $table . '` ' . $this->where;
-        $smt           = self::$pdo->prepare($this->lastSql);
-        $smt->execute($this->bind);
-        return $smt->fetchAll(\PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * 查询多条的单个字段数组
-     *
-     * @param string $table  查询的表
-     * @param array  $where  查询的条件
-     * @param string $column 查询的字段
-     *
-     * @return void
-     */
-    public function findAllBy($table, $where = [], $column)
-    {
-        if ($all = $this->findAll($table, $where, $column)) {
-            return array_column($all, $column);
-        }
-
-        return [];
-    }
-
-    /**
-     * 查询数据一条数据
-     *
-     * @param string $table  查询的表格
-     * @param array  $where  查询条件
-     * @param string $fields 查询的字段
-     *
-     * @return array
-     */
-    public function findOne($table, $where = [], $fields = '*')
-    {
-        $this->bind = $this->condition = [];
-        $this->select($fields);
-        $this->buildQuery($where);
-        $this->lastSql = 'SELECT ' . $this->select . ' FROM `' . $table . '` ' . $this->where . ' LIMIT 1';
-        $smt           = self::$pdo->prepare($this->lastSql);
-        $smt->execute($this->bind);
-        return $smt->fetch(\PDO::FETCH_ASSOC);
-    }
-
-    /**
-     *
-     * 查询单个字段信息
-     *
-     * @param string $table  查询的表
-     * @param array  $where  查询的条件
-     * @param string $column 查询的字段
-     *
-     * @return bool|mixed
-     */
-    public function findBy($table, $where, $column)
-    {
-        if ($one = $this->findOne($table, $where, [$column])) {
-            return isset($one[$column]) ? $one[$column] : false;
-        }
-
-        return false;
-    }
-
     public function query($sql, $bind)
     {
         $this->sql = $sql;
         $smt       = self::$pdo->prepare($this->sql);
         $smt->execute($bind);
         return $this->all ? $smt->fetchAll(\PDO::FETCH_ASSOC) : $smt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * 执行SQL
+     *
+     * @param string $sql  执行的SQL
+     * @param array  $bind 绑定的参数
+     *
+     * @return bool|\PDOStatement
+     */
+    public function execute($sql, $bind = [])
+    {
+        $this->sql = $sql;
+        $smt       = self::$pdo->prepare($this->sql);
+        $smt->execute($bind);
+        return $smt;
     }
 }

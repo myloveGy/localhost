@@ -57,60 +57,6 @@ class Query
     private $bindCount = [];
 
     /**
-     * 执行新增数据
-     *
-     * @param array $insert 新增的数组[字段 => 值]
-     *
-     * @return bool|string
-     */
-    public function insert(array $insert)
-    {
-
-    }
-
-    /**
-     * 修改数据
-     *
-     * @param string      $table  修改的表
-     * @param array|mixed $where  修改的添加
-     * @param array       $update 修改的数据
-     *
-     * @return bool|int
-     */
-    public function update($table, $where, array $update)
-    {
-        $this->reset()->buildQuery($where);
-        $update_bind = [];
-        foreach ($update as $key => $value) {
-            $bindName      = $this->bind($key, $value);
-            $update_bind[] = "`{$key}` = {$bindName}";
-        }
-
-        $this->lastSql = 'UPDATE `' . $table . '` SET ' . implode($update_bind, ', ') . $this->where;
-        return $mixed;
-    }
-
-    /**
-     * 删除数据
-     *
-     * @param string      $table 删除的表
-     * @param array|mixed $where 删除的条件
-     *
-     * @return boolean|int
-     */
-    public function delete($table, $where)
-    {
-        $this->reset()->buildQuery($where);
-        $this->lastSql = 'DELETE FROM `' . $table . '`' . $this->where;
-        $smt           = self::$pdo->prepare($this->lastSql);
-        if ($mixed = $smt->execute($this->bind)) {
-            $mixed = $smt->rowCount();
-        }
-
-        return $mixed;
-    }
-
-    /**
      * 查询数据全部数据
      *
      * @param string $table  查询的表格
