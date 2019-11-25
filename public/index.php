@@ -1,6 +1,6 @@
 <?php
 
-include '../vendor/autoload/autoload.php';
+include '../vendor/autoload.php';
 
 $config = include '../config/main.php';
 
