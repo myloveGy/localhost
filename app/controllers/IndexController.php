@@ -8,4 +8,12 @@ class IndexController
     {
         success(['key' => getRandomStr(32)]);
     }
+
+    public function actionTest()
+    {
+    	success([
+    		'header' => $_SERVER,
+    		'post' => $_POST,
+    	]);
+    }
 }
