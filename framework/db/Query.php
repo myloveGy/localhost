@@ -97,6 +97,40 @@ class Query
     }
 
     /**
+     * 修改数据
+     *
+     * @param array $update
+     *
+     * @return int
+     * @throws \Exception
+     */
+    public function update(array $update)
+    {
+        $set = [];
+        foreach ($update as $column => $value) {
+            $set[] = '`' . $column . '` = ' . $this->bind($column, $value);
+        }
+
+        $this->buildWhere();
+        $set       = implode(', ', $set);
+        $this->sql = "UPDATE {$this->table} SET {$set}{$this->where}{$this->limit}";
+        return $this->db->execute($this->sql, $this->bind)->rowCount();
+    }
+
+    /**
+     * 删除数据
+     *
+     * @return int
+     * @throws \Exception
+     */
+    public function delete()
+    {
+        $this->buildWhere();
+        $this->sql = "DELETE FROM {$this->table}{$this->where}{$this->limit}";
+        return $this->db->execute($this->sql, $this->bind)->rowCount();
+    }
+
+    /**
      * 查询的字段
      *
      * @param string|array $columns 查找的字段
@@ -219,7 +253,7 @@ class Query
      */
     public function limit($length, $start = 0)
     {
-        $this->limit = ' LIMIT ' . intval($start) . ', ' . intval($length);
+        $this->limit = $start == 0 ? ' LIMIT ' . intval($length) : ' LIMIT ' . intval($start) . ', ' . intval($length);
         return $this;
     }
 
@@ -362,24 +396,21 @@ class Query
     /**
      * 处理查询条件
      *
-     * @param array $where
-     *
      * @return $this
      */
-    private function buildQuery($where = [])
+    private function buildQuery()
     {
-        if ($where) {
-            $this->where($where);
-        }
-
-        if (empty($this->where)) {
-            $this->where = '';
-            $this->bind  = [];
-        } else {
-            $this->where = ' WHERE ' . implode(' AND ', $this->where);
-        }
-
+        $this->buildWhere();
         $this->sql = "SELECT {$this->select} FROM {$this->table}{$this->where}{$this->limit}";
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    private function buildWhere()
+    {
+        $this->where = $this->where ? ' WHERE ' . implode(' AND ', $this->where) : '';
         return $this;
     }
 }

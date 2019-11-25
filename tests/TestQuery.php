@@ -12,26 +12,30 @@ class TestQuery extends TestCase
     /**
      * @throws \Exception
      */
-    public function testQuery()
+    public function testOne()
     {
-        $db  = $this->getDB();
-        $one = (new Query($db))->from('ks_admin')
+        $query = $this->getQuery();
+        $one   = $query->from('ks_admin')
+            ->select('id,username,email')
             ->where('id', '=', 1)
             ->where('id', '!=', 2)
             ->where('id', 'between', [0, 2])
             ->one();
-        var_dump($one, $db->getSql());
+        var_dump($one, $query->getSql());
         $this->assertArrayHasKey('username', $one);
     }
 
     /**
      * @throws \Exception
      */
-    public function testInsert()
+    public function testAll()
     {
-        $db  = $this->getDB();
-        $one = $db->insert('ks_admin', ['username' => 'test12434', 'email' => '64456']);
-        var_dump($one, $db->getSql());
+        $query = $this->getQuery();
+        $one   = $query->from('ks_admin')
+            ->select('id,username,email')
+            ->where('id', 'in', [0, 1, 2])
+            ->all();
+        var_dump($one, $query->getSql());
         $this->assertNotEmpty($one);
     }
 
@@ -40,13 +44,14 @@ class TestQuery extends TestCase
      */
     public function testUpdate()
     {
-        $db  = $this->getDB();
-        $one = $db->update('ks_admin', 'id = :id',
-            ['username' => 'test1243455', 'email' => '6445556'],
-            [':id' => 8]
-        );
-        var_dump($one, $db->getSql());
-        $this->assertEquals(1, $one);
+        $query = $this->getQuery();
+        $one   = $query->from('ks_admin')
+            ->where('id', '>', 2)
+//            ->where(['or', ['id' => 5, 'email' => '789']])
+            ->limit(2)
+            ->update(['updated_at' => time()]);
+        var_dump($one, $query->getSql());
+        $this->assertEquals(2, $one);
     }
 
     /**
@@ -54,18 +59,21 @@ class TestQuery extends TestCase
      */
     public function testDelete()
     {
-        $db  = $this->getDB();
-        $one = $db->delete('ks_admin', 'id = :id', [':id' => 8]);
-        var_dump($one, $db->getSql());
+        $query = $this->getQuery();
+        $one   = $query->from('ks_admin')
+            ->where('id', '>', 2)
+            ->limit(1)
+            ->delete();
+        var_dump($one, $query->getSql());
         $this->assertEquals(1, $one);
     }
 
     /**
-     * @return DB
+     * @return Query
      */
-    private function getDB()
+    private function getQuery()
     {
         $main = include __DIR__ . '/../config/main.php';
-        return DB::getInstance(Helper::getValue($main, 'db'));
+        return new Query(DB::getInstance(Helper::getValue($main, 'db')));
     }
 }
