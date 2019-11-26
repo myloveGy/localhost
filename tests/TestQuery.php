@@ -69,6 +69,19 @@ class TestQuery extends TestCase
     }
 
     /**
+     * @throws \Exception
+     */
+    public function testCount()
+    {
+        $query = $this->getQuery();
+        $one   = $query->from('ks_admin')
+            ->where('id', '>', 2)
+            ->sum('id');
+        var_dump($one, $query->getSql());
+//        $this->assertEquals(1, $one);
+    }
+
+    /**
      * @return Query
      */
     private function getQuery()

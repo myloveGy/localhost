@@ -15,6 +15,10 @@ use jinxing\framework\lib\Helper;
 /**
  * Class Query 查询类
  *
+ * @method mixed count($column = '*') 统计查询
+ * @method mixed sum($column = '*')   求和查询
+ * @method mixed avg($column = '*')   平均值
+ *
  * @package jinxing\framework\db
  */
 class Query
@@ -64,6 +68,11 @@ class Query
     private $bindCount = [];
 
     /**
+     * @var array
+     */
+    private $methods = ['sum', 'avg', 'count'];
+
+    /**
      * Query constructor.
      *
      * @param DB $db
@@ -111,10 +120,8 @@ class Query
             $set[] = '`' . $column . '` = ' . $this->bind($column, $value);
         }
 
-        $this->buildWhere();
-        $set       = implode(', ', $set);
-        $this->sql = "UPDATE {$this->table} SET {$set}{$this->where}{$this->limit}";
-        return $this->db->execute($this->sql, $this->bind)->rowCount();
+        $set = implode(', ', $set);
+        return $this->buildSql('UPDATE {table} SET ' . $set . '{where}{limit}')->execute();
     }
 
     /**
@@ -125,9 +132,7 @@ class Query
      */
     public function delete()
     {
-        $this->buildWhere();
-        $this->sql = "DELETE FROM {$this->table}{$this->where}{$this->limit}";
-        return $this->db->execute($this->sql, $this->bind)->rowCount();
+        return $this->buildSql('DELETE FROM {table}{where}{limit}')->execute();
     }
 
     /**
@@ -288,6 +293,25 @@ class Query
         return str_replace(array_keys($search), array_values($search), $this->sql);
     }
 
+    /**
+     * @param $name
+     * @param $arguments
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    public function __call($name, $arguments)
+    {
+        if (!in_array($name, $this->methods, true) || count($arguments) > 1) {
+            throw new \RuntimeException('Query not exists method:' . $name);
+        }
+
+        // 没有传参数
+        $column       = empty($arguments) ? '*' : "`{$arguments[0]}`";
+        $this->select = strtoupper($name) . '(' . $column . ')';
+        return $this->buildQuery()->db->execute($this->sql, $this->bind)->fetchColumn();
+    }
+
     private function buildArrayCondition($columns, $and = 'AND')
     {
         $firstWhere = array_shift($columns);
@@ -400,17 +424,35 @@ class Query
      */
     private function buildQuery()
     {
-        $this->buildWhere();
-        $this->sql = "SELECT {$this->select} FROM {$this->table}{$this->where}{$this->limit}";
+        return $this->buildSql('SELECT {select} FROM {table}{where}{limit}');
+    }
+
+    /**
+     * 处理SQL
+     *
+     * @param string $sql
+     *
+     * @return $this
+     */
+    private function buildSql($sql = '')
+    {
+        $this->where = $this->where ? ' WHERE ' . implode(' AND ', $this->where) : '';
+        $this->sql   = str_replace(
+            ['{select}', '{table}', '{where}', '{limit}'],
+            [$this->select, $this->table, $this->where, $this->limit],
+            $sql);
         return $this;
     }
 
     /**
-     * @return $this
+     * 执行编辑和修改的SQL
+     *
+     * @return int
+     *
+     * @throws \Exception
      */
-    private function buildWhere()
+    private function execute()
     {
-        $this->where = $this->where ? ' WHERE ' . implode(' AND ', $this->where) : '';
-        return $this;
+        return $this->db->execute($this->sql, $this->bind)->rowCount();
     }
 }

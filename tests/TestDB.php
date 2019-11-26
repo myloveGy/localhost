@@ -25,7 +25,11 @@ class TestDB extends TestCase
     public function testInsert()
     {
         $db  = $this->getDB();
-        $one = $db->insert('ks_admin', ['username' => 'test12434', 'email' => '64456']);
+        $one = $db->insert('ks_admin', [
+            'username'      => 'test12434' . mt_rand(1, 999),
+            'email'         => '64456' . mt_rand(1, 999),
+            'password_hash' => md5(mt_rand(10000, 99999)),
+        ]);
         var_dump($one, $db->getSql());
         $this->assertNotEmpty($one);
     }
