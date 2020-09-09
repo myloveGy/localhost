@@ -12,7 +12,8 @@
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-openssl": "*",
-        "jinxing/curl": "^1.0"
+        "jinxing/curl": "^1.0",
+        "ext-curl": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^5.0.0"
