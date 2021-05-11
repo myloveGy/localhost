@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use jinxing\framework\db\Query;
 use jinxing\framework\lib\Helper;
 
-class TestQuery extends TestCase
+class QueryTest extends TestCase
 {
     /**
      * @throws \Exception

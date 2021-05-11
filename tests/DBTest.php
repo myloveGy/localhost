@@ -6,7 +6,7 @@ use jinxing\framework\db\DB;
 use PHPUnit\Framework\TestCase;
 use jinxing\framework\lib\Helper;
 
-class TestDB extends TestCase
+class DBTest extends TestCase
 {
     /**
      * @throws \Exception

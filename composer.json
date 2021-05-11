@@ -26,5 +26,10 @@
         "files": [
             "helpers/helpers.php"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
     }
 }
