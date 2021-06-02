@@ -8,9 +8,18 @@ return [
     'actionPrefix' => 'action',
 
     // 数据库配置
-    'db' => [
+    'db'           => [
         'dns'      => 'mysql:dbname=examination;host=127.0.0.1;port=3306;charset=utf8',
         'username' => 'root',
         'password' => '',
+    ],
+
+    // rabbitmq
+    'rabbitmq'     => [
+        'host'         => '127.0.0.1',
+        'port'         => 5672,
+        'username'     => 'guest',
+        'password'     => 'guest',
+        'virtual-host' => '/study',
     ],
 ];
