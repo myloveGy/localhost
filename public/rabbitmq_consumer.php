@@ -20,8 +20,14 @@ $channel = $connection->channel();
 
 echo " [*] Waiting for logs. To exit press CTRL+C\n";
 
-$channel->basic_consume('spring_queue', '', false, true, false, false, function ($message) {
-    var_dump($message->body);
+$channel->basic_consume('spring_queue', '', false, false, false, false, function ($message) {
+    /* @var $message \PhpAmqpLib\Message\AMQPMessage */
+    var_dump($message->getBody());
+
+    if ($message->getDeliveryTag() == 1) {
+        // 回复消息
+        $message->getChannel()->basic_ack($message->getDeliveryTag(), false);
+    }
 });
 
 // 一直监听消息

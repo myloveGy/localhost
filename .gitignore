@@ -7,3 +7,4 @@
 /vendor/
 /.DS_Store
 /public/.DS_Store
+/composer.lock
