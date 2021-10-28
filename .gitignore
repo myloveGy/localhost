@@ -1,5 +1,6 @@
 /ace
 /.idea
+/.vscode
 /public/test.php
 /public/*.log
 /public/AdminLTE-2.3.2
