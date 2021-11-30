@@ -2,6 +2,8 @@
 
 namespace jinxing\framework\lib;
 
+use Exception;
+
 /**
  * 红包分配算法
  *
@@ -61,12 +63,13 @@ class Coupon
      * 处理返回
      *
      * @return array
+     * @throws Exception
      */
     public function handle()
     {
         // A. 验证
         if ($this->amount < $validAmount = $this->coupon_min * $this->num) {
-            throw new Exception('红包总金额必须≥' . $validAmount . '元');
+            throw new \Exception('红包总金额必须≥' . $validAmount . '元');
         }
 
         // B. 分配红包

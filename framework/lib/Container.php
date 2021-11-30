@@ -14,10 +14,10 @@ class Container
      *
      * 绑定接口和生成相应实例的回调函数
      *
-     * @param  [type]  $abstract  [description]
-     * @param  [type]  $concrete [description]
-     * @param  boolean $shared    [description]
-     * @return [type]             [description]
+     * @param         $abstract
+     * @param         $concrete
+     * @param boolean $shared [description]
+     * @return void [type]             [description]
      */
     public function bind($abstract, $concrete, $shared = false)
     {
@@ -36,6 +36,9 @@ class Container
         };
     }
 
+    /**
+     * @throws \ReflectionException
+     */
     public function make($abstract)
     {
         $concrete = $this->getConcrete($abstract);
@@ -62,6 +65,9 @@ class Container
         return $this->bindings[$abstract]['concrete'];
     }
 
+    /**
+     * @throws \ReflectionException
+     */
     public function build($concrete)
     {
         if ($concrete instanceof \Closure) {
@@ -70,7 +76,7 @@ class Container
 
         $reflector = new \ReflectionClass($concrete);
         if (!$reflector->isInstantiable()) {
-            echo "Target [$Contrete] is not instantiable";
+            echo "Target [$concrete] is not instantiable";
         }
 
         $constructor = $reflector->getConstructor();
@@ -83,6 +89,9 @@ class Container
         return $reflector->newInstanceArgs($instances);
     }
 
+    /**
+     * @throws \ReflectionException
+     */
     protected function getDependencies($parameters)
     {
         $dependencies = [];
@@ -98,6 +107,9 @@ class Container
         return $dependencies;
     }
 
+    /**
+     * @throws \ReflectionException
+     */
     protected function resolveClass(\ReflectionParameter $parameter)
     {
         return $this->make($parameter->getClass()->name);

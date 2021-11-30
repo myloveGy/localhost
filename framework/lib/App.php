@@ -19,7 +19,7 @@ class App
         $reflector = new \ReflectionMethod($instance, $method);
         $parameters = [];
 
-        foreach ($reflector->getParameters() as $key => $parameter) {
+        foreach ($reflector->getParameters() as $parameter) {
             $class = $parameter->getClass();
             if ($class) {
                 $parameters[] = new $class->name();
@@ -31,8 +31,10 @@ class App
 
     /**
      * 实例化类（自动注入依赖）
-     * @param  string $class 类的名称
+     * @param string $class 类的名称
      * @return object 返回实例化的类
+     * @throws \ReflectionException
+     * @throws \Exception
      */
     public static function make($class)
     {
@@ -54,8 +56,9 @@ class App
 
     /**
      * 自动运行类的方法（自动完成依赖）
-     * @param  string $action 类@方法名称
+     * @param string $action 类@方法名称
      * @return mixed
+     * @throws \ReflectionException
      */
     public static function run($action)
     {
